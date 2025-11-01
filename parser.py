@@ -6,11 +6,12 @@ import json
 from tqdm import tqdm
 import csv
 import os
+import re
 
 base_url_to_parse = 'https://www.sothebys.com/en/results?from=&to=&f2=00000164-609b-d1db-a5e6-e9ff01230000&f2=00000164-609b-d1db-a5e6-e9ff08ab0000&q='
 base_fake_user_agent = {'user-agent': UserAgent().random}
-max_checked_auctions = 2
-current_cheked = 0
+# max_checked_auctions = 2
+# current_cheked = 0
 try:
     base_response = requests.get(url=base_url_to_parse, timeout=(3, 3), headers=base_fake_user_agent)
     base_response.raise_for_status()
@@ -35,10 +36,10 @@ for auction_tag in massive_of_auctions_to_pasrse:
 
 for auction_url in tqdm(massive_of_urls_to_parse):
     print(f'\nОбработка аукциона {auction_url}')
-    if current_cheked < max_checked_auctions: # для дебагга, адли после того как фулл напишешь иначе гг будет
-        current_cheked += 1
-    else:
-        break
+    # if current_cheked < max_checked_auctions: # для дебагга, адли после того как фулл напишешь иначе гг будет
+        # current_cheked += 1
+    # else:
+        # break
     try:
         auction_headers = {'user-agent': UserAgent().random}
         auction_response = requests.get(url=auction_url, timeout=(3, 3), headers=auction_headers)
@@ -58,12 +59,19 @@ for auction_url in tqdm(massive_of_urls_to_parse):
         auction_name = auction_soup.find('h1', class_='headline-module_headline28Regular__CWxFH css-16yerai').text.strip()
     except:
         auction_name = auction_url.split('/')[-1]
-    auction_images = auction_soup.find('div', id="lot-list").find_all('div', class_='css-1up9enl')
+    try:
+        auction_images = auction_soup.find('div', id="lot-list").find_all('div', class_='css-1up9enl')
+        
+    except Exception as error:
+        print(f'При обработке аукциона {auction_url} произошла ошибка {error}')
+        continue
+    
     if len(auction_images) == 0:
         print(f'Не найдено ни одной картины в аукционе по ссылке {auction_url}')
         sleep(2)
         continue
-    # SAVE_DIR = fr'D:\python_main\training_env\art_analytics\data\{auction_name}'
+    
+    auction_name = re.sub(r'[^\w\s\-\.]', '_', auction_name)
     SAVE_DIR = f"data/{auction_name}"
     os.makedirs(SAVE_DIR, exist_ok=True)
     
@@ -88,7 +96,3 @@ for auction_url in tqdm(massive_of_urls_to_parse):
             print(f'На этапе загрузки картинки произошла ошибка {error}')
             break
     sleep(2)
-    
-
-# print(len(massive_of_auctions_to_pasrse))
-# print(base_response.text)
