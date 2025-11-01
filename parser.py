@@ -1,5 +1,5 @@
 import requests
-from time import sleep
+from time import sleep, time
 from bs4 import BeautifulSoup
 from fake_useragent import UserAgent
 import json
@@ -9,7 +9,7 @@ import os
 
 base_url_to_parse = 'https://www.sothebys.com/en/results?from=&to=&f2=00000164-609b-d1db-a5e6-e9ff01230000&f2=00000164-609b-d1db-a5e6-e9ff08ab0000&q='
 base_fake_user_agent = {'user-agent': UserAgent().random}
-max_checked_auctions = 1
+max_checked_auctions = 2
 current_cheked = 0
 try:
     base_response = requests.get(url=base_url_to_parse, timeout=(3, 3), headers=base_fake_user_agent)
@@ -59,18 +59,24 @@ for auction_url in tqdm(massive_of_urls_to_parse):
     except:
         auction_name = auction_url.split('/')[-1]
     auction_images = auction_soup.find('div', id="lot-list").find_all('div', class_='css-1up9enl')
+    if len(auction_images) == 0:
+        print(f'Не найдено ни одной картины в аукционе по ссылке {auction_url}')
+        sleep(2)
+        continue
     # SAVE_DIR = fr'D:\python_main\training_env\art_analytics\data\{auction_name}'
     SAVE_DIR = f"data/{auction_name}"
     os.makedirs(SAVE_DIR, exist_ok=True)
     
-    for image_tag in auction_images:
+    for image_tag in tqdm(auction_images, desc='Image downloading'):
         image_url = image_tag.find('div', class_='css-1f38y8e').find('img').get('src')
+        if image_url is None:
+            continue
         try:
             image_download_response = requests.get(url=image_url, headers=auction_headers, timeout=5)
             if image_download_response.status_code != 200:
                 continue
                 
-            file_name = f'image_test.jpg'
+            file_name = f'{image_tag.find('div', class_='css-1u3rssc').find('p').text.strip()}.jpg'
             file_path = os.path.join(SAVE_DIR, file_name)
             
             with open(file_path, 'wb') as writer_file:
