@@ -23,7 +23,7 @@ options.add_argument('--disable-web-security')
 options.add_argument('--ignore-certificate-errors-spki-list')
 
 SCROLL_PAUSE = 1.5
-MAX_SCROLL = 1 
+MAX_SCROLL = 2 
 current_scroll = 0
 
 base_url = 'https://www.sothebys.com/en/results?from=01.01.2025&to=30.11.2025&f0=1735678800000-1764450000000&f2=00000164-609b-d1db-a5e6-e9ff01230000&f2=00000164-609b-d1db-a5e6-e9ff08ab0000&q='
@@ -132,8 +132,8 @@ with webdriver.Chrome(options=options) as browser:
             print(f'Не смогли совершить иттерацию скроллинга, ошибка {error}')
     input('готов закончить')
 print(auctions_href)
-print(len(auctions_href))
-print(len(set(auctions_href)))
+# print(len(auctions_href))
+# print(len(set(auctions_href)))
 
 # a = ['https://www.sothebys.com/en/buy/auction/2025/modern-discoveries-l25005', 'https://www.sothebys.com/en/buy/auction/2025/modernites-pf2516']
 # auctions_href = ['https://www.sothebys.com/en/buy/auction/2025/modern-contemporary-evening-auction-2?locale=en&lotFilter=AllLots', 'https://www.sothebys.com/en/buy/auction/2025/modernites-pf2516']
@@ -214,7 +214,6 @@ for auction_url in tqdm(auctions_href):
         #     estimate_price = image_tag.find('span', class_='css-17b8gen').find('p', class_='paragraph-module_paragraph14Regular__Zfr98 css-1ud9h99').text.strip()
             
         main_dict[auction_name].append({file_name: image_url})
-        break
         
         # try:
         #     image_auction_response = requests.get(url=image_auction_url, headers=auction_headers, timeout=(3, 3))
