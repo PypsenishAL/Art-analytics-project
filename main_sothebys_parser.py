@@ -33,16 +33,16 @@ max_iter = 10
 current_itttter = 0
 
 def dismiss_cookie_and_overlays(browser: webdriver.Chrome, wait: WebDriverWait) -> None:
-    """Try to close cookie banner and common overlays if present."""
+    '''
+    Try to close cookie banner and common overlays if present 
+    '''
     possible_selectors = [
-        # Cookie banners
         '[id*="cookie"] button',
         '[class*="cookie"] button',
         'div.cookie a[class*="accept"]',
         'div[class*="cookie"] [class*="accept"]',
         'button[aria-label*="cookie"]',
         'button[onclick*="cookie"]',
-        # Close/consent buttons
         'button[aria-label*="закрыть"]',
         'button[aria-label*="close"]',
         'button[title*="закрыть"]',
@@ -97,7 +97,7 @@ auctions_title_seen = set()
     
 with webdriver.Chrome(options=options) as browser:
     browser.set_page_load_timeout(5)
-    wait = WebDriverWait(browser, timeout=3)
+    wait = WebDriverWait(browser, timeout=4)
     try:
         browser.get(url=base_url)
         sleep(1.5)
@@ -114,11 +114,12 @@ with webdriver.Chrome(options=options) as browser:
     last_height = browser.execute_script('return document.body.scrollHeight') 
     
     while current_scroll < MAX_SCROLL:
-        current_auctions_href_title = [(elem.find_element(By.CSS_SELECTOR, '.AuctionActionLink-link').get_attribute('href').strip(), elem.find_element(By.CSS_SELECTOR, '.Card-title').text.strip() + str(randint(-10, 10)))
+        current_auctions_href_title = [(elem.find_element(By.CSS_SELECTOR, '.AuctionActionLink-link').get_attribute('href').strip(), elem.find_element(By.CSS_SELECTOR, '.Card-title').text.strip() + str(randint(-10, 10)), 
+                                        elem.find_element(By.CSS_SELECTOR, '.Card-details').text.strip())
                                       for elem in wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, '.Card-info'))) if
                                       elem.find_element(By.CSS_SELECTOR, '.AuctionActionLink-link').get_attribute('href').strip()
                                       not in auctions_href_seen]
-        for href, title in current_auctions_href_title:
+        for href, title, _ in current_auctions_href_title:
             auctions_href_seen.add(href)
             
         auctions_href.extend(current_auctions_href_title)
@@ -133,16 +134,18 @@ with webdriver.Chrome(options=options) as browser:
             wait.until(EC.visibility_of_element_located((By.TAG_NAME, 'body')))
         except TimeoutException as error:
             print(f'Не смогли совершить иттерацию скроллинга, ошибка {error}')
+            
+    total_auctions = len(auctions_href)
+    current_auction = 1
+    print(f'Всего будет обработано {len(auctions_href)} аукционов')
     
-    for auction_href, auction_title in auctions_href:
+    for auction_href, auction_title, auction_additional_info in auctions_href:
         print('--------------------------------')
-        # print(auction_href)
         current_itttter +=1
         if current_itttter >= max_iter:
             break        
         try:
             browser.get(url=auction_href)
-            # sleep(1.5)
         except TimeoutException as error:
             # print(f'Слишком долгая загрузка страницы по адресу {base_url}')
             actions = ActionChains(browser)
@@ -150,9 +153,16 @@ with webdriver.Chrome(options=options) as browser:
         print(f'Успешная загрузка страницы аукциона {auction_title}')
         sleep(1.5)
         dismiss_cookie_and_overlays(browser, wait)
+        auction_additional_info = auction_additional_info.split('|')
+        if len(auction_additional_info) == 2:
+            auction_date, auction_city =  auction_additional_info
         
+        elif len(auction_additional_info) == 3:
+            auction_date, gmt_hours, auction_city = auction_additional_info
+        auction_date = auction_date.strip()
+        auction_city = auction_city.strip()
         # main_dict = {}
-        main_dict[auction_title] = {}
+        main_dict[auction_title] = {'Auction_date':auction_date, 'auction_city': auction_city}
         
         try:
             auctions_images_list = wait.until(EC.visibility_of_all_elements_located((By.CSS_SELECTOR, '#lot-list')))
@@ -175,11 +185,10 @@ with webdriver.Chrome(options=options) as browser:
                 try:
                     auction_image_element_url = auction_image_element.find_element(By.CSS_SELECTOR, '.css-1ivophs')
                     auction_image_element_url = auction_image_element_url.get_attribute('href').strip()
-                    # print(auction_image_element_url)
                 except TimeoutException as error:
                     print(f'Не смолги получить ссылку на лот')
                     continue
-                    
+                
                 try:
                     lot_image_url = auction_image_element.find_element(By.CLASS_NAME, 'css-1f38y8e').find_element(By.TAG_NAME, 'img').get_attribute('src')
                 except NoSuchElementException as error:
@@ -224,14 +233,13 @@ with webdriver.Chrome(options=options) as browser:
         
         # with open(fr'D:\python_main\training_env\art_analytics\data_selenium\{auction_title}.json', 'w', encoding='utf-8') as writer_file:
             # json.dump(main_dict, fp=writer_file, ensure_ascii=False, indent=4)
-            
+        print(f'Обработано {current_auction}/{total_auctions}')
+        current_auction += 1
         print('--------------------------------\n')
-                
-    # input()  
+             
     
 with open(r'D:\python_main\training_env\art_analytics\data\images_selenium.json', 'w', encoding='utf-8') as writer_file:
     json.dump(main_dict, fp=writer_file, ensure_ascii=False, indent=4)
 
-# print(main_dict)
 end = time()
 print(f'Время работы {round(end - start, 2)}')
